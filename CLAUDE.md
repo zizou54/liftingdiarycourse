@@ -18,5 +18,7 @@ s
 | ------------- | ----------------------------------------------------------------------- |
 | `docs/ui.md`  | UI standards: shadcn/ui components only (no custom components), date formatting with date-fns |
 | `docs/data-fetching.md` | Data fetching: Server Components only, DB queries only via Drizzle helpers in `src/data/`, users can only access their own data |
+| `docs/data-mutations.md` | Data mutations: DB writes only via Drizzle helpers in `src/data/`, Server Actions only in colocated `actions.ts` files, typed params (no `FormData`), Zod validation of all action arguments |
+| `docs/auth.md` | Auth: Clerk only (no other auth libraries or custom auth), route protection in `src/proxy.ts`, `auth()` checks in every data helper and Server Action, Clerk UI components |
 
 ~ /docs/ui.md
