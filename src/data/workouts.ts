@@ -1,6 +1,7 @@
 import 'server-only';
 import { connection } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
+import { and, eq } from 'drizzle-orm';
 import { addDays } from 'date-fns';
 import { TZDate } from '@date-fns/tz';
 import { db } from '@/db';
@@ -56,4 +57,30 @@ export async function createWorkout(data: { name: string | null; startedAt: Date
     .returning({ id: workouts.id });
 
   return workout;
+}
+
+/** The current user's workout with this id, or null if they don't own one. */
+export async function getWorkoutById(id: string) {
+  await connection(); // per-user data: only run for a real request
+  const userId = await requireUserId();
+
+  // Filter by BOTH id and userId. Never by id alone.
+  const workout = await db.query.workouts.findFirst({ where: { id, userId } });
+  return workout ?? null;
+}
+
+/** Updates the current user's workout. Returns null if they don't own it. */
+export async function updateWorkout(
+  id: string,
+  data: { name: string | null; startedAt: Date },
+) {
+  const userId = await requireUserId();
+
+  const [workout] = await db
+    .update(workouts)
+    .set(data)
+    .where(and(eq(workouts.id, id), eq(workouts.userId, userId))) // id AND userId
+    .returning({ id: workouts.id });
+
+  return workout ?? null; // null = not found for this user
 }

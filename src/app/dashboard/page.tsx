@@ -1,8 +1,17 @@
 import { Suspense } from 'react';
+import Link from 'next/link';
 import { format, isValid, parseISO } from 'date-fns';
 import { TZDate } from '@date-fns/tz';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { getWorkoutsForDate } from '@/data/workouts';
 import { DatePicker } from './date-picker';
 
@@ -88,6 +97,16 @@ async function WorkoutList({ date, timeZone }: { date: string | null; timeZone: 
                   <Badge variant="secondary">In progress</Badge>
                 )}
               </CardDescription>
+              <CardAction>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  nativeButton={false}
+                  render={<Link href={`/dashboard/workout/${workout.id}`} />}
+                >
+                  Edit
+                </Button>
+              </CardAction>
             </CardHeader>
             <CardContent className="flex flex-col gap-3">
               {workout.workoutExercises.map((we) => (
