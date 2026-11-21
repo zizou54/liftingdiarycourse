@@ -33,7 +33,7 @@ These standards apply to **everything** to do with authentication and authorizat
 
 ```ts
 // src/proxy.ts
-const isProtectedRoute = createRouteMatcher(['/dashboard(.*)', '/workouts(.*)']);
+const isProtectedRoute = createRouteMatcher(['/dashboard(.*)']);
 
 export default clerkMiddleware(async (auth, req) => {
   if (isProtectedRoute(req)) await auth.protect();

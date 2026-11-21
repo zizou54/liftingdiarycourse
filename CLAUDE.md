@@ -20,6 +20,7 @@ s
 | `docs/data-fetching.md` | Data fetching: Server Components only, DB queries only via Drizzle helpers in `src/data/`, users can only access their own data |
 | `docs/data-mutations.md` | Data mutations: DB writes only via Drizzle helpers in `src/data/`, Server Actions only in colocated `actions.ts` files, typed params (no `FormData`), Zod validation of all action arguments, no `redirect()` in actions (navigate client side after the action resolves) |
 | `docs/auth.md` | Auth: Clerk only (no other auth libraries or custom auth), route protection in `src/proxy.ts`, `auth()` checks in every data helper and Server Action, Clerk UI components |
+| `docs/routing.md` | Routing: all app routes live under `/dashboard`, `/dashboard` and all sub pages protected via Next.js middleware (`src/proxy.ts`, `'/dashboard(.*)'` matcher), no hand-written auth redirects |
 | `docs/server-components.md` | Server Components: `params` / `searchParams` are Promises and MUST be awaited (no sync access, no `.then()`), await inside `<Suspense>`, validate params and `notFound()` |
 
 - /docs/auth.md
