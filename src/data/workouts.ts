@@ -4,6 +4,7 @@ import { auth } from '@clerk/nextjs/server';
 import { addDays } from 'date-fns';
 import { TZDate } from '@date-fns/tz';
 import { db } from '@/db';
+import { workouts } from '@/db/schema';
 
 async function requireUserId() {
   const { userId } = await auth();
@@ -44,3 +45,15 @@ export async function getWorkoutsForDate(date: string, timeZone: string) {
 }
 
 export type WorkoutWithDetails = Awaited<ReturnType<typeof getWorkoutsForDate>>[number];
+
+/** Creates a workout for the current user and returns its id. */
+export async function createWorkout(data: { name: string | null; startedAt: Date }) {
+  const userId = await requireUserId();
+
+  const [workout] = await db
+    .insert(workouts)
+    .values({ ...data, userId }) // userId ALWAYS comes from auth()
+    .returning({ id: workouts.id });
+
+  return workout;
+}

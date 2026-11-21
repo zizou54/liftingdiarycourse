@@ -99,9 +99,33 @@ src/app/workouts/new/
 
 - The file MUST start with `'use server';` at the top, so every export is a Server Action.
 - Only export `async` Server Actions from `actions.ts`. Keep Zod schemas and other helpers in the file without exporting them (or move shared schemas to a non-`'use server'` module).
-- An action does four things, in this order: **validate** the input with Zod → **call** a `src/data/` helper → **revalidate** affected routes (`revalidatePath` / `updateTag` from `next/cache`) → **return** a result (or `redirect`).
+- An action does four things, in this order: **validate** the input with Zod → **call** a `src/data/` helper → **revalidate** affected routes (`revalidatePath` / `updateTag` from `next/cache`) → **return** a typed result.
 - Actions contain **no** database code. All DB work goes through `src/data/` helpers.
 - Server Actions are public HTTP endpoints. The `src/data/` helper they call MUST check `auth()` (see `docs/auth.md` §4), even if the page is protected.
+
+### Redirects happen client side, NEVER in the action
+
+> ⚠️ **Do NOT** call `redirect()` (or `permanentRedirect()`) from `next/navigation` inside a Server Action.
+
+- ✅ The action returns a typed result (e.g. `{ success: true, data: { id } }`). The Client Component that called it awaits the result and then navigates with `router.push(...)` / `router.replace(...)` from `useRouter()` (`next/navigation`).
+- Only navigate on success. On failure, stay on the page and show the error.
+- This keeps every action's outcome explicit and typed, and lets the client build URLs from values only the browser knows (e.g. the user's time zone).
+
+```tsx
+// src/app/workouts/new/workout-form.tsx
+'use client';
+
+const router = useRouter();
+
+startTransition(async () => {
+  const result = await createWorkoutAction({ name, startedAt });
+  if (!result.success) {
+    setError(result.error); // stay on the page
+    return;
+  }
+  router.push('/dashboard'); // redirect AFTER the action resolves, on the client
+});
+```
 
 ## 3. Server Action parameters MUST be typed, and NEVER `FormData`
 
@@ -209,3 +233,4 @@ Before you merge any code that creates, updates, or deletes data, check:
 - [ ] Every action validates its input with Zod `safeParse` first, and passes only `parsed.data` on.
 - [ ] No `userId` is accepted from the client or included in a Zod schema.
 - [ ] The action revalidates affected routes and returns a typed result.
+- [ ] The action does not call `redirect()`. Any navigation happens client side with `useRouter()` after the action resolves successfully.
