@@ -22,8 +22,10 @@ s
 | `docs/auth.md` | Auth: Clerk only (no other auth libraries or custom auth), route protection in `src/proxy.ts`, `auth()` checks in every data helper and Server Action, Clerk UI components |
 | `docs/server-components.md` | Server Components: `params` / `searchParams` are Promises and MUST be awaited (no sync access, no `.then()`), await inside `<Suspense>`, validate params and `notFound()` |
 
-- /docs/ui.md
+- /docs/auth.md
 - /docs/data-fetching.md
 - /docs/auth.md
 - /docs/data-mutations.md
+- /docs/routing.md
 - /docs/server-components.md
+- /docs/ui.md
