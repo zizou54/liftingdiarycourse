@@ -1,101 +1,111 @@
-import { auth } from '@clerk/nextjs/server';
 import { Suspense } from 'react';
-import { getWorkoutsForDate, type WorkoutWithDetails } from '@/data/workouts';
+import { format, isValid, parseISO } from 'date-fns';
+import { TZDate } from '@date-fns/tz';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { getWorkoutsForDate } from '@/data/workouts';
 import { DatePicker } from './date-picker';
 
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
 
-function parseDate(value: string | string[] | undefined): string | null {
-  if (typeof value !== 'string' || !DATE_RE.test(value)) return null;
-  const d = new Date(`${value}T00:00:00Z`);
-  return !Number.isNaN(d.getTime()) && d.toISOString().startsWith(value) ? value : null;
+function parseDate(value: unknown) {
+  return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) && isValid(parseISO(value))
+    ? value
+    : null;
 }
 
-function parseTimeZone(value: string | string[] | undefined): string | null {
-  if (typeof value !== 'string') return null;
+function parseTimeZone(value: unknown) {
+  if (typeof value !== 'string' || !value) return null;
   try {
-    return new Intl.DateTimeFormat('en-US', { timeZone: value }).resolvedOptions().timeZone;
+    new Intl.DateTimeFormat('en', { timeZone: value }); // throws on unknown zones
+    return value;
   } catch {
     return null;
   }
 }
 
-export default function DashboardPage(props: PageProps<'/dashboard'>) {
+export default function DashboardPage({ searchParams }: { searchParams: SearchParams }) {
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 px-6 py-10">
+    <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6 px-6 py-10">
       <h1 className="text-3xl font-semibold tracking-tight">Dashboard</h1>
-      <Suspense fallback={<p className="text-zinc-500">Loading…</p>}>
-        <DashboardContent searchParams={props.searchParams} />
+      <Suspense fallback={<p className="text-muted-foreground">Loading…</p>}>
+        <DashboardContent searchParams={searchParams} />
       </Suspense>
     </main>
   );
 }
 
-async function DashboardContent({
-  searchParams,
-}: {
-  searchParams: PageProps<'/dashboard'>['searchParams'];
-}) {
-  const { userId, redirectToSignIn } = await auth();
-  if (!userId) return redirectToSignIn();
-
+async function DashboardContent({ searchParams }: { searchParams: SearchParams }) {
   const params = await searchParams;
   const date = parseDate(params.date);
   const timeZone = parseTimeZone(params.tz);
 
   return (
-    <>
+    <div className="grid items-start gap-6 md:grid-cols-[auto_1fr]">
       <DatePicker date={date} timeZone={timeZone} />
-      {date && timeZone ? (
-        <WorkoutList workouts={await getWorkoutsForDate(userId, date, timeZone)} timeZone={timeZone} />
-      ) : (
-        <p className="text-zinc-500">Loading…</p>
-      )}
-    </>
+
+      <section className="flex min-w-0 flex-col gap-4">
+        <h2 className="text-xl font-semibold">
+          Workouts{date && ` for ${format(parseISO(date), 'do MMM yyyy')}`}
+        </h2>
+
+        {/* Keyed by date + time zone: picking a new date mounts a fresh
+            boundary, so its fallback shows instead of the old day's workouts. */}
+        <Suspense
+          key={`${date}|${timeZone}`}
+          fallback={<p className="text-muted-foreground">Loading workouts…</p>}
+        >
+          <WorkoutList date={date} timeZone={timeZone} />
+        </Suspense>
+      </section>
+    </div>
   );
 }
 
-function WorkoutList({ workouts, timeZone }: { workouts: WorkoutWithDetails[]; timeZone: string }) {
-  if (workouts.length === 0) {
-    return <p className="text-zinc-500">No workouts logged for this date.</p>;
-  }
-
-  const time = new Intl.DateTimeFormat(undefined, { timeStyle: 'short', timeZone });
+async function WorkoutList({ date, timeZone }: { date: string | null; timeZone: string | null }) {
+  // Data is fetched here, on the server, for the logged-in user only.
+  const workouts = date && timeZone ? await getWorkoutsForDate(date, timeZone) : [];
 
   return (
-    <ul className="flex flex-col gap-4">
-      {workouts.map((workout) => (
-        <li
-          key={workout.id}
-          className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-950"
-        >
-          <div className="flex items-baseline justify-between gap-4">
-            <h2 className="text-lg font-semibold">{workout.name ?? 'Workout'}</h2>
-            <span className="text-sm text-zinc-500">
-              {time.format(workout.startedAt)}
-              {workout.completedAt && ` – ${time.format(workout.completedAt)}`}
-            </span>
-          </div>
-          {workout.workoutExercises.length === 0 ? (
-            <p className="mt-3 text-sm text-zinc-500">No exercises logged.</p>
-          ) : (
-            <ul className="mt-3 flex flex-col gap-2">
+    <>
+      {workouts.length === 0 ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>No workouts logged</CardTitle>
+            <CardDescription>There are no workouts logged for this date.</CardDescription>
+          </CardHeader>
+        </Card>
+      ) : (
+        workouts.map((workout) => (
+          <Card key={workout.id}>
+            <CardHeader>
+              <CardTitle>{workout.name ?? 'Workout'}</CardTitle>
+              <CardDescription className="flex items-center gap-2">
+                {format(new TZDate(workout.startedAt, timeZone!), 'HH:mm')}
+                {workout.completedAt ? (
+                  ` – ${format(new TZDate(workout.completedAt, timeZone!), 'HH:mm')}`
+                ) : (
+                  <Badge variant="secondary">In progress</Badge>
+                )}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-3">
               {workout.workoutExercises.map((we) => (
-                <li key={we.id}>
+                <div key={we.id} className="flex flex-col gap-1">
                   <p className="font-medium">{we.exercise.name}</p>
-                  <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                    {we.sets.length === 0
-                      ? 'No sets'
-                      : we.sets
-                          .map((s) => `${s.reps} × ${s.weight == null ? 'BW' : `${Number(s.weight)} kg`}`)
-                          .join(', ')}
-                  </p>
-                </li>
+                  <div className="flex flex-wrap gap-2">
+                    {we.sets.map((set) => (
+                      <Badge key={set.id} variant="outline">
+                        {set.reps} × {set.weight == null ? 'BW' : `${Number(set.weight)} kg`}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
               ))}
-            </ul>
-          )}
-        </li>
-      ))}
-    </ul>
+            </CardContent>
+          </Card>
+        ))
+      )}
+    </>
   );
 }
