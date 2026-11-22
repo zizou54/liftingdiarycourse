@@ -2,6 +2,7 @@ import { Suspense } from 'react';
 import Link from 'next/link';
 import { format, isValid, parseISO } from 'date-fns';
 import { TZDate } from '@date-fns/tz';
+import { Plus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -36,7 +37,13 @@ function parseTimeZone(value: unknown) {
 export default function DashboardPage({ searchParams }: { searchParams: SearchParams }) {
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6 px-6 py-10">
-      <h1 className="text-3xl font-semibold tracking-tight">Dashboard</h1>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <h1 className="text-3xl font-semibold tracking-tight">Dashboard</h1>
+        <Button nativeButton={false} render={<Link href="/dashboard/workout/new" />}>
+          <Plus />
+          Log new workout
+        </Button>
+      </div>
       <Suspense fallback={<p className="text-muted-foreground">Loading…</p>}>
         <DashboardContent searchParams={searchParams} />
       </Suspense>

@@ -1,9 +1,11 @@
 'use client';
 
-import { useEffect, useOptimistic, useTransition } from 'react';
+import { useEffect, useOptimistic, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { format, parseISO } from 'date-fns';
+import { CalendarIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import {
   Card,
@@ -13,6 +15,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 /**
  * Picks the dashboard date. It does NOT fetch data: it only writes the chosen
@@ -25,6 +28,7 @@ export function DatePicker({ date, timeZone }: { date: string | null; timeZone: 
   // Show the clicked day right away, while the server renders the new date.
   // It settles back to the `date` prop once the navigation finishes.
   const [optimisticDate, setOptimisticDate] = useOptimistic(date);
+  const [open, setOpen] = useState(false);
 
   const goTo = (day: Date, mode: 'push' | 'replace') => {
     const nextDate = format(day, 'yyyy-MM-dd');
@@ -51,7 +55,7 @@ export function DatePicker({ date, timeZone }: { date: string | null; timeZone: 
     <Card className="w-fit" aria-busy={isPending}>
       <CardHeader>
         <CardTitle>Date</CardTitle>
-        <CardDescription>{selected ? format(selected, 'do MMM yyyy') : 'Pick a date'}</CardDescription>
+        <CardDescription>Choose a day to view workouts</CardDescription>
         {isPending && (
           <CardAction>
             <Badge variant="secondary">Loading…</Badge>
@@ -59,12 +63,24 @@ export function DatePicker({ date, timeZone }: { date: string | null; timeZone: 
         )}
       </CardHeader>
       <CardContent>
-        <Calendar
-          mode="single"
-          selected={selected}
-          defaultMonth={selected}
-          onSelect={(d) => d && goTo(d, 'push')}
-        />
+        <Popover open={open} onOpenChange={setOpen}>
+          <PopoverTrigger render={<Button variant="outline" className="justify-start" />}>
+            <CalendarIcon />
+            {selected ? format(selected, 'do MMM yyyy') : 'Pick a date'}
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar
+              mode="single"
+              selected={selected}
+              defaultMonth={selected}
+              onSelect={(d) => {
+                if (!d) return;
+                setOpen(false);
+                goTo(d, 'push');
+              }}
+            />
+          </PopoverContent>
+        </Popover>
       </CardContent>
     </Card>
   );
